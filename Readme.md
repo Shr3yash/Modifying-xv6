@@ -1,7 +1,6 @@
-## Project Overview
+# Project Overview
 
-This project extends a minimalist Unix-like kernel with advanced system call tracing and signal handling, and implements four distinct CPU scheduling policies. 
-The goal is to explore real-time operating system concepts and demonstrate performance trade-offs through hands-on experimentation.
+This project extends a minimalist Unix-like kernel with advanced system call tracing and signal handling, and implements four distinct CPU scheduling policies. The goal is to explore real-time operating system concepts and demonstrate performance trade-offs through hands-on experimentation.
 
 ---
 
@@ -42,7 +41,7 @@ Each policy’s logic resides in the `scheduler()` function, showcasing kernel-l
 
 ## 3. Performance Evaluation
 
-I measured each scheduler’s **average waiting time** and **average turnaround time** across a synthetic workload of CPU-bound and I/O-bound processes (aging set to 30 ticks):
+We measured each scheduler’s **average waiting time** and **average turnaround time** across a synthetic workload of CPU-bound and I/O-bound processes (aging set to 30 ticks):
 
 | Policy      | Avg. Waiting Time (ticks) | Avg. Turnaround Time (ticks) |
 | ----------- | ------------------------- | ---------------------------- |
@@ -75,6 +74,87 @@ I measured each scheduler’s **average waiting time** and **average turnaround 
    * Run standard test suite: `make qtest` and observe output logs.
 
 ---
+
+## 5. Architecture Diagram
+
+Visual representation of core modules and their interactions:
+
+```mermaid
+flowchart TD
+    A[User Processes] -->|syscall| B[Kernel Syscall Handler]
+    B --> C{Mask Check}
+    C -->|Allowed| D[Execute Syscall]
+    C -->|Filtered| E[Skip Logging]
+    A --> F[Trap Handler]
+    F -->|tick == alarm| G[Sigalarm Handler]
+
+    subgraph Scheduling
+      H[Ready Queue]
+      H --> I[FCFS Scheduler]
+      H --> J[Lottery Scheduler]
+      H --> K[MLFQ Scheduler]
+      H --> L[PBS Scheduler]
+      I --> M[Context Switch]
+      J --> M
+      K --> M
+      L --> M
+    end
+```
+
+---
+
+## 6. Experiment Setup
+
+* **Hardware:** Intel i5 CPU, 8 GB RAM, QEMU emulator for VM-level isolation.
+* **Software:** xv6-based kernel modified on Linux host (Ubuntu 20.04).
+* **Workloads:** Synthetic mix of 50% CPU-bound and 50% I/O-bound processes; each workload runs 100 processes.
+* **Parameters:**
+
+  * Aging interval for MLFQ: 30 ticks
+  * Lottery ticket assignment: default 10 tickets per process (unless modified via `settickets`).
+* **Reproducibility:** Fixed random seed (`srand(42)`) for lottery draws and workload generation.
+
+---
+
+## 7. Performance Graphs
+
+Below are the measured average waiting and turnaround times for each scheduling policy under the defined workload.
+
+![Avg Waiting & Turnaround Times](performance_graph.png)
+
+---
+
+## 8. Parameter Sensitivity Analysis
+
+We vary the MLFQ aging interval from 10 to 50 ticks to observe its effect on average waiting time.
+
+![MLFQ Aging Sensitivity](parameter_sensitivity.png)
+
+---
+
+## 9. Design Trade-offs
+
+* **FCFS:** Minimal overhead but poor responsiveness under mixed loads due to convoy effect.
+* **Lottery:** Fairness tunable via ticket counts, introduces randomness overhead.
+* **MLFQ:** Balances I/O-bound and CPU-bound tasks effectively; complexity increases with queue management and aging logic.
+* **PBS:** Adaptive to dynamic priority changes; tie-break rules add scheduling overhead.
+
+---
+
+## 10. Future Work
+
+* Implement deadline-aware scheduling (EDF) for real-time guarantees.
+* Explore real-time extensions (rate-monotonic scheduling) on multi-core systems.
+* Integrate priority inheritance to handle priority inversion scenarios.
+
+---
+
+## 11. References
+
+1. Abraham Silberschatz, Peter B. Galvin, Greg Gagne, *Operating System Concepts*, 10th Ed., Wiley, 2018.
+2. M. Sismanis et al., “A Complete and Efficient Implementation of MLFQ,” *IEEE Transactions on Computers*, 2019.
+3. R. Love, *Linux Kernel Development*, 3rd Ed., Addison-Wesley, 2010.
+
 
 ## Implementation of System Calls
 
